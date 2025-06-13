@@ -1,0 +1,21 @@
+default:
+  image: golang:1.24.4-bookworm
+  before_script:
+
+stages:
+  - fmt
+  - lint
+
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+pretty:
+  stage: fmt
+  script:
+    - go --version
+    - if [ "$(gofmt -s -l . | wc -l)" -gt 0 ]; then exit 1; fi
+
+quality:
+  stage: lint
