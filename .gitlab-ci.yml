@@ -1,8 +1,12 @@
 default:
-  image: golang:1.24.4-bookworm
+  image: rust:latest
   before_script:
+    - rustup install stable
+    - rustc --version
 
 stages:
+  - build
+  - test
   - fmt
   - lint
 
@@ -11,11 +15,29 @@ workflow:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
 
+build:
+  stage: build
+  script:
+    - echo "Building code"
+    - cargo build --all --release
+
+test-nfq:
+  stage: test
+  script:
+    - echo "Running unit tests"
+    - cargo test --all --release
+
 pretty:
   stage: fmt
   script:
-    - go --version
-    - if [ "$(gofmt -s -l . | wc -l)" -gt 0 ]; then exit 1; fi
+    - echo "Running cargo fmt"
+    - rustup component add rustfmt
+    - cargo fmt --all -- --check
 
-quality:
+code-quality:
   stage: lint
+  script:
+    - echo "Running cargo clippy"
+    - rustup component add clippy
+    - cargo clippy --release --all -- -D warnings
+
