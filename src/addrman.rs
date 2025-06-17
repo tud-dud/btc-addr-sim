@@ -1,7 +1,8 @@
-use log::{error, info};
-use std::{fs, path::PathBuf};
+use log::{debug, error, info};
+use rand::prelude::*;
+use std::{collections::BTreeMap, fs, path::PathBuf};
 
-use crate::types::{AddrInfo, Addrman, RawAddrman};
+use crate::types::{Addr, AddrInfo, Addrman, RawAddrman};
 
 impl Addrman {
     pub fn from_json_file(path: &PathBuf) -> Option<Self> {
@@ -25,6 +26,38 @@ impl Addrman {
             self.new_table.len(),
             self.tried_table.len()
         );
+    }
+    // removes this address and any referenes that may exists
+    pub(crate) fn move_from_new(addr: &Addr) {
+        debug!("Removing {} from new", addr);
+    }
+
+    pub fn get_initial_connections(&mut self, seed: u64, number: usize) {
+        let mut rng = SmallRng::seed_from_u64(seed);
+        for (table, new) in [
+            (self.new_table.clone(), true),
+            (self.tried_table.clone(), false),
+        ] {
+            let chosen = table.into_iter().choose_multiple(&mut rng, number / 2);
+            self.init_peers(new, chosen);
+        }
+    }
+
+    /// Adds them to list of current peers and removes them from the table
+    fn init_peers(&mut self, new: bool, chosen: Vec<(u16, BTreeMap<u16, String>)>) {
+        for conn in chosen.iter() {
+            let addr = conn
+                .1
+                .first_key_value()
+                .unwrap_or((&u16::default(), &String::default()))
+                .1
+                .to_owned();
+            if let Some((bucket, position)) = self.get_pos_in_table(new, &addr) {
+                // remove from table
+                self.remove_from_table(new, bucket, position);
+            }
+            self.current_peers.push(addr);
+        }
     }
 }
 

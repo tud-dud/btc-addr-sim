@@ -1,6 +1,6 @@
 use log::info;
 use serde::Deserialize;
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 pub(crate) type Addr = String;
 pub(crate) type Bucket = u16;
@@ -8,16 +8,17 @@ pub(crate) type Position = u16;
 
 #[derive(Debug, Default)]
 pub struct Addrman {
-    /// has 64 buckets with 1024 slots
-    pub new_table: HashMap<Bucket, HashMap<Position, Addr>>,
-    /// has 16 buckets with 1024 slots
-    pub tried_table: HashMap<Bucket, HashMap<Position, Addr>>,
+    /// has 1024 buckets with 64 slots
+    pub new_table: BTreeMap<Bucket, BTreeMap<Position, Addr>>,
+    /// has 256 buckets with 64 slots
+    pub tried_table: BTreeMap<Bucket, BTreeMap<Position, Addr>>,
+    pub current_peers: Vec<Addr>,
 }
 
 #[derive(Debug, Default, Deserialize)]
 pub(crate) struct RawAddrman {
-    pub(crate) new: HashMap<String, AddrInfo>,
-    pub(crate) tried: HashMap<String, AddrInfo>,
+    pub(crate) new: BTreeMap<String, AddrInfo>,
+    pub(crate) tried: BTreeMap<String, AddrInfo>,
 }
 
 #[derive(Debug, PartialEq, Deserialize)]
@@ -68,14 +69,42 @@ impl Addrman {
         } else {
             if new {
                 self.new_table
-                    .insert(bucket, HashMap::from([(position, address)]));
+                    .insert(bucket, BTreeMap::from([(position, address)]));
             } else {
                 self.tried_table
-                    .insert(bucket, HashMap::from([(position, address)]));
+                    .insert(bucket, BTreeMap::from([(position, address)]));
+            }
+        }
+    }
+    // returns the bucket and position, if available
+    pub(crate) fn get_pos_in_table(&self, new: bool, address: &Addr) -> Option<(Bucket, Position)> {
+        let table = if new {
+            self.new_table.clone()
+        } else {
+            self.tried_table.clone()
+        };
+        for bucket in table.iter() {
+            for (position, addr) in bucket.1 {
+                if addr == address {
+                    return Some((*bucket.0, *position));
+                }
+            }
+        }
+        None
+    }
+    pub(crate) fn remove_from_table(&mut self, new: bool, bucket: u16, position: u16) {
+        if new {
+            if let Some(bucket) = self.new_table.get_mut(&bucket) {
+                bucket.remove(&position);
+            }
+        } else {
+            if let Some(bucket) = self.tried_table.get_mut(&bucket) {
+                bucket.remove(&position);
             }
         }
     }
 }
+
 fn split_bucket_pos_str(buc_pos: String) -> (Bucket, Position) {
     let parts = buc_pos.split('/').collect::<Vec<_>>();
     let bucket = parts[0].parse::<u16>().unwrap_or_default();

@@ -36,6 +36,7 @@ fn main() {
             addrman.new_table.len(),
             addrman.tried_table.len()
         );
+        addrman.get_initial_connections(args.seed, 8);
         let attacker_addrs = generate_attacker_addresses(args.num_addrs, args.seed);
         addrman.insert_attacker_addresses(&attacker_addrs);
     }
@@ -46,15 +47,14 @@ fn generate_attacker_addresses(num: usize, seed: u64) -> Vec<(AddrInfo, u16, u16
     let mut addrs = vec![];
     let mut rng = SmallRng::seed_from_u64(seed);
     let port = 18444;
-    let net = rng.random_range(1..=255);
+    let net = rng.random_range(1..255);
     for i in 0..num {
         let ip = format!("11.1.{}.{}", i + 1, net);
         // random bucket and random position
-        let bucket: u16 = rng.random_range(..64);
-        let pos: u16 = rng.random_range(..1024);
+        let bucket: u16 = rng.random_range(..1024);
+        let pos: u16 = rng.random_range(..64);
         addrs.push((AddrInfo { address: ip, port }, bucket, pos));
     }
-    println!("{:?}", addrs);
     addrs
 }
 
@@ -74,16 +74,16 @@ mod tests {
                     address: "11.1.1.207".to_string(),
                     port: 18444,
                 },
-                47,
-                102,
+                765,
+                6,
             ),
             (
                 AddrInfo {
                     address: "11.1.2.207".to_string(),
                     port: 18444,
                 },
-                47,
-                189,
+                764,
+                11,
             ),
         ];
         assert_eq!(actual, expected);
