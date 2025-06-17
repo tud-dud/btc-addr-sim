@@ -1,7 +1,7 @@
 use log::{error, info};
 use std::{fs, path::PathBuf};
 
-use crate::types::{Addrman, RawAddrman};
+use crate::types::{AddrInfo, Addrman, RawAddrman};
 
 impl Addrman {
     pub fn from_json_file(path: &PathBuf) -> Option<Self> {
@@ -13,6 +13,18 @@ impl Addrman {
             None
         };
         addrman
+    }
+    pub fn insert_attacker_addresses(&mut self, addrs: &Vec<(AddrInfo, u16, u16)>) {
+        info!("Inserting {} addresses in addrman.", addrs.len());
+        for (addr, bucket, position) in addrs {
+            // check and remove if there's an address in the position
+            self.insert_to_table(true, *bucket, *position, addr.address.clone());
+        }
+        info!(
+            "Updated Addrman has {} new buckets and {} tried buckets",
+            self.new_table.len(),
+            self.tried_table.len()
+        );
     }
 }
 

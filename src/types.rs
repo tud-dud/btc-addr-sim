@@ -3,13 +3,15 @@ use serde::Deserialize;
 use std::collections::HashMap;
 
 pub(crate) type Addr = String;
-pub(crate) type Bucket = usize;
-pub(crate) type Position = usize;
+pub(crate) type Bucket = u16;
+pub(crate) type Position = u16;
 
 #[derive(Debug, Default)]
 pub struct Addrman {
-    pub new_table: HashMap<Bucket, HashMap<Addr, Position>>,
-    pub tried_table: HashMap<Bucket, HashMap<Addr, Position>>,
+    /// has 64 buckets with 1024 slots
+    pub new_table: HashMap<Bucket, HashMap<Position, Addr>>,
+    /// has 16 buckets with 1024 slots
+    pub tried_table: HashMap<Bucket, HashMap<Position, Addr>>,
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -18,10 +20,10 @@ pub(crate) struct RawAddrman {
     pub(crate) tried: HashMap<String, AddrInfo>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, PartialEq, Deserialize)]
 pub struct AddrInfo {
-    pub(crate) address: String,
-    pub(crate) port: i64,
+    pub address: String,
+    pub port: u16,
 }
 
 impl RawAddrman {
@@ -49,29 +51,35 @@ impl Addrman {
         addrman
     }
 
-    fn insert_to_table(&mut self, new: bool, bucket: usize, position: usize, address: String) {
+    pub(crate) fn insert_to_table(
+        &mut self,
+        new: bool,
+        bucket: u16,
+        position: u16,
+        address: String,
+    ) {
         let entry = if new {
             self.new_table.get_mut(&bucket)
         } else {
             self.tried_table.get_mut(&bucket)
         };
         if let Some(entry) = entry {
-            entry.insert(address, position);
+            entry.insert(position, address);
         } else {
             if new {
                 self.new_table
-                    .insert(bucket, HashMap::from([(address, position)]));
+                    .insert(bucket, HashMap::from([(position, address)]));
             } else {
                 self.tried_table
-                    .insert(bucket, HashMap::from([(address, position)]));
+                    .insert(bucket, HashMap::from([(position, address)]));
             }
         }
     }
 }
 fn split_bucket_pos_str(buc_pos: String) -> (Bucket, Position) {
     let parts = buc_pos.split('/').collect::<Vec<_>>();
-    let bucket = parts[0].parse::<usize>().unwrap_or_default();
-    let position = parts[1].parse::<usize>().unwrap_or_default();
+    let bucket = parts[0].parse::<u16>().unwrap_or_default();
+    let position = parts[1].parse::<u16>().unwrap_or_default();
     (bucket, position)
 }
 
