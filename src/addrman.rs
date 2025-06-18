@@ -36,7 +36,7 @@ impl Addrman {
     ) {
         self.insert_to_table(false, new_bucket, new_position, addr.clone());
         // remove from table
-        if let Some((bucket, position)) = self.get_pos_in_table(true, &addr) {
+        if let Some((bucket, position)) = self.get_pos_in_table(true, addr) {
             debug!(
                 "Moving {} from new[{}][{}] to tried[{}][{}]",
                 addr, bucket, position, new_bucket, new_position

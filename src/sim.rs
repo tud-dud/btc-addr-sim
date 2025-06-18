@@ -42,7 +42,7 @@ impl Simulation {
             "Running simulation with {} attacker addresses {}.",
             self.attacker_addrs.len(),
             if self.stop_at > 0 {
-                format!("for {} rounds", self.stop_at.to_string())
+                format!("for {} rounds", self.stop_at)
             } else {
                 "forever".to_owned()
             },
@@ -123,10 +123,10 @@ impl Simulation {
                 .current_peers
                 .retain(|peer| *peer != *replayed_conn);
             // 2. remove this address from all tables because the attacker never allows it again
-            if let Some((bucket, position)) = self.addrman.get_pos_in_table(true, &replayed_conn) {
+            if let Some((bucket, position)) = self.addrman.get_pos_in_table(true, replayed_conn) {
                 self.addrman.remove_from_table(true, bucket, position);
             } else if let Some((bucket, position)) =
-                self.addrman.get_pos_in_table(false, &replayed_conn)
+                self.addrman.get_pos_in_table(false, replayed_conn)
             {
                 self.addrman.remove_from_table(false, bucket, position);
             }
@@ -135,7 +135,7 @@ impl Simulation {
     fn choose_new_peer(&mut self, rng: &mut SmallRng) -> bool {
         let mut new_peer_is_attacker = false;
         // 1. choose a table
-        if let Some(use_new_table) = vec![true, false].choose(rng) {
+        if let Some(use_new_table) = [true, false].choose(rng) {
             debug!(
                 "[ROUND = {}] New connection will be chosen from {} table",
                 self.steps,

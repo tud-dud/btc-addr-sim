@@ -66,14 +66,12 @@ impl Addrman {
         };
         if let Some(entry) = entry {
             entry.insert(position, address);
+        } else if new {
+            self.new_table
+                .insert(bucket, BTreeMap::from([(position, address)]));
         } else {
-            if new {
-                self.new_table
-                    .insert(bucket, BTreeMap::from([(position, address)]));
-            } else {
-                self.tried_table
-                    .insert(bucket, BTreeMap::from([(position, address)]));
-            }
+            self.tried_table
+                .insert(bucket, BTreeMap::from([(position, address)]));
         }
     }
     // returns the bucket and position, if available
@@ -97,10 +95,8 @@ impl Addrman {
             if let Some(bucket) = self.new_table.get_mut(&bucket) {
                 bucket.remove(&position);
             }
-        } else {
-            if let Some(bucket) = self.tried_table.get_mut(&bucket) {
-                bucket.remove(&position);
-            }
+        } else if let Some(bucket) = self.tried_table.get_mut(&bucket) {
+            bucket.remove(&position);
         }
     }
 }
