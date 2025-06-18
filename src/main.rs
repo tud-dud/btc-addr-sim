@@ -1,8 +1,8 @@
 use clap::Parser;
-use log::{info, LevelFilter};
+use log::{error, info, LevelFilter};
 use sim::Simulation;
 use std::path::PathBuf;
-use types::Addrman;
+use types::{Addrman, SimOutput};
 
 mod addrman;
 mod helpers;
@@ -34,6 +34,9 @@ struct Cli {
     /// How many regular connections to terminate per round
     #[arg(long = "concurrency", short = 'c', default_value_t = 1)]
     concurrency: usize,
+    /// Path to directory where the results will be stored
+    #[arg(long = "out", short = 'o')]
+    output_dir: Option<PathBuf>,
     verbose: bool,
 }
 
@@ -41,6 +44,19 @@ fn main() {
     let args = Cli::parse();
     let log_level = args.log_level;
     env_logger::builder().filter_level(log_level).init();
+
+    let output_dir = if let Some(output_dir) = args.output_dir {
+        output_dir
+    } else {
+        PathBuf::from("sim-results")
+    };
+    if let Err(e) = std::fs::create_dir_all(&output_dir) {
+        error!("Error creating output directory {}", e);
+    }
+    info!(
+        "Simulation results will be written to {:#?}/ directory.",
+        output_dir
+    );
 
     if let Some(mut addrman) = Addrman::from_json_file(&args.peers) {
         info!(
@@ -57,6 +73,8 @@ fn main() {
             args.seed,
             args.concurrency,
         );
-        sim.start();
+        let result = sim.start();
+        let sim_output = SimOutput::from_sim(&sim, &result);
+        sim_output.to_file(output_dir);
     }
 }

@@ -47,7 +47,9 @@ impl Simulation {
         }
     }
 
-    pub(crate) fn start(&mut self) {
+    /// returns a list of (time, #num_connections) which is updated whenever the attacker gets a
+    /// new connection
+    pub(crate) fn start(&mut self) -> Vec<(u64, u64)> {
         info!(
             "Running simulation with {} attacker addresses {} and concurrency factor of {}.",
             self.attacker_addrs.len(),
@@ -98,6 +100,7 @@ impl Simulation {
             }
         }
         info!("Finished simulation after {} rounds", self.steps);
+        att_count_by_step
     }
 
     fn make_feeler_connection(&mut self, rng: &mut SmallRng) {

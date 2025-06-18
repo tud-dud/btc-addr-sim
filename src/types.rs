@@ -1,8 +1,9 @@
+use csv::Writer;
 use log::{debug, info};
-use serde::Deserialize;
-use std::collections::BTreeMap;
+use serde::{Deserialize, Serialize};
+use std::{collections::BTreeMap, path::PathBuf};
 
-use crate::helpers;
+use crate::{helpers, sim::Simulation};
 pub(crate) type Addr = String;
 pub(crate) type Bucket = u16;
 pub(crate) type Position = u16;
@@ -26,6 +27,24 @@ pub(crate) struct RawAddrman {
 pub struct AddrInfo {
     pub address: String,
     pub port: u16,
+}
+
+#[derive(Debug, PartialEq, Serialize)]
+pub struct SimOutput {
+    pub run: u64,
+    pub concurrency: usize,
+    pub num_prefixes: usize,
+    pub total_hours: f64,
+    pub slot_1: u64,
+    pub slot_2: u64,
+    pub slot_3: u64,
+    pub slot_4: u64,
+    pub slot_5: u64,
+    pub slot_6: u64,
+    pub slot_7: u64,
+    pub slot_8: u64,
+    pub slot_9: u64,
+    pub slot_10: u64,
 }
 
 impl RawAddrman {
@@ -116,6 +135,38 @@ impl Addrman {
             }
         }
         debug!("removed {} occurences from {} table", occurences, table);
+    }
+}
+
+impl SimOutput {
+    /// expects a list of pairs
+    pub fn from_sim(sim: &Simulation, time_conns: &[(u64, u64)]) -> Self {
+        Self {
+            run: sim.seed,
+            concurrency: sim.concurrency,
+            num_prefixes: sim.attacker_addrs.len(),
+            total_hours: sim.steps as f64 / 60.0,
+            slot_1: time_conns[0].0,
+            slot_2: time_conns[1].0,
+            slot_3: time_conns[2].0,
+            slot_4: time_conns[3].0,
+            slot_5: time_conns[4].0,
+            slot_6: time_conns[5].0,
+            slot_7: time_conns[6].0,
+            slot_8: time_conns[7].0,
+            slot_9: time_conns[8].0,
+            slot_10: time_conns[9].0,
+        }
+    }
+
+    pub fn to_file(&self, path: PathBuf) {
+        let mut path = path.clone();
+        path.push(format!(
+            "sim-s{}-n{}-c{}.csv",
+            self.run, self.num_prefixes, self.concurrency
+        ));
+        let mut writer = Writer::from_path(path).expect("Error creating csv writer");
+        writer.serialize(self).expect("Error serializing SimOutput");
     }
 }
 
