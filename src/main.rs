@@ -31,6 +31,9 @@ struct Cli {
     /// Stop after this many steps
     #[arg(long = "until", short = 'u', default_value_t = 0)]
     stop_after: u64,
+    /// How many regular connections to terminate per round
+    #[arg(long = "concurrency", short = 'c', default_value_t = 1)]
+    concurrency: usize,
     verbose: bool,
 }
 
@@ -47,7 +50,13 @@ fn main() {
         );
         // + 2 block-relay only peers
         addrman.get_initial_connections(args.seed, 10);
-        let mut sim = Simulation::new(addrman, args.stop_after, args.num_addrs, args.seed);
+        let mut sim = Simulation::new(
+            addrman,
+            args.stop_after,
+            args.num_addrs,
+            args.seed,
+            args.concurrency,
+        );
         sim.start();
     }
 }

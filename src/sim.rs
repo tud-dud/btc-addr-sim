@@ -19,10 +19,18 @@ pub struct Simulation {
     /// Stop simulation after this many steps. 0 means forever
     pub stop_at: u64,
     pub seed: u64,
+    /// the max number of connections to terminate in each round
+    pub concurrency: usize,
 }
 
 impl Simulation {
-    pub fn new(addrman: Addrman, stop_at: u64, num_attacker: usize, seed: u64) -> Self {
+    pub fn new(
+        addrman: Addrman,
+        stop_at: u64,
+        num_attacker: usize,
+        seed: u64,
+        concurrency: usize,
+    ) -> Self {
         let attacker_addrs = helpers::generate_attacker_addresses(num_attacker, seed);
         let mut addrman = Addrman { ..addrman };
         addrman.insert_attacker_addresses(&attacker_addrs);
@@ -35,18 +43,20 @@ impl Simulation {
             steps: 0,
             stop_at,
             seed,
+            concurrency,
         }
     }
 
     pub(crate) fn start(&mut self) {
         info!(
-            "Running simulation with {} attacker addresses {}.",
+            "Running simulation with {} attacker addresses {} and concurrency factor of {}.",
             self.attacker_addrs.len(),
             if self.stop_at > 0 {
                 format!("for {} rounds", self.stop_at)
             } else {
                 "forever".to_owned()
             },
+            self.concurrency,
         );
         let mut rng = SmallRng::seed_from_u64(self.seed);
         let mut stop = false;
@@ -115,7 +125,8 @@ impl Simulation {
         let mut potential_addresses = self.addrman.current_peers.clone();
         potential_addresses.retain(|peer| !self.attacker_addrs.contains(peer));
         // 1. pick random peer to terminate
-        if let Some(replayed_conn) = potential_addresses.choose(rng) {
+        let to_close = potential_addresses.choose_multiple(rng, self.concurrency);
+        for replayed_conn in to_close {
             debug!(
                 "[ROUND = {}] Connection to {} was closed",
                 self.steps, replayed_conn
