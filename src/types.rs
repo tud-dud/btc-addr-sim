@@ -1,7 +1,8 @@
-use log::info;
+use log::{debug, info};
 use serde::Deserialize;
 use std::collections::BTreeMap;
 
+use crate::helpers;
 pub(crate) type Addr = String;
 pub(crate) type Bucket = u16;
 pub(crate) type Position = u16;
@@ -42,11 +43,11 @@ impl Addrman {
         );
         let mut addrman = Addrman::default();
         for (buc_pos, addrinfo) in raw_addrman.new {
-            let (bucket, position) = split_bucket_pos_str(buc_pos);
+            let (bucket, position) = helpers::split_bucket_pos_str(buc_pos);
             addrman.insert_to_table(true, bucket, position, addrinfo.address);
         }
         for (buc_pos, addrinfo) in raw_addrman.tried {
-            let (bucket, position) = split_bucket_pos_str(buc_pos);
+            let (bucket, position) = helpers::split_bucket_pos_str(buc_pos);
             addrman.insert_to_table(false, bucket, position, addrinfo.address);
         }
         addrman
@@ -90,22 +91,32 @@ impl Addrman {
         }
         None
     }
-    pub(crate) fn remove_from_table(&mut self, new: bool, bucket: u16, position: u16) {
+
+    // TODO: Duplication
+    pub(crate) fn remove_all_from_table(&mut self, new: bool, bucket: u16, position: u16) {
+        let mut occurences = 0;
+        let table = if new { "new" } else { "tried" };
         if new {
             if let Some(bucket) = self.new_table.get_mut(&bucket) {
-                bucket.remove(&position);
+                if let Some(addr) = bucket.remove(&position) {
+                    occurences += 1;
+                    while let Some((bucket, position)) = self.get_pos_in_table(true, &addr) {
+                        self.new_table.get_mut(&bucket).unwrap().remove(&position);
+                        occurences += 1;
+                    }
+                }
             }
         } else if let Some(bucket) = self.tried_table.get_mut(&bucket) {
-            bucket.remove(&position);
+            if let Some(addr) = bucket.remove(&position) {
+                occurences += 1;
+                while let Some((bucket, position)) = self.get_pos_in_table(true, &addr) {
+                    self.tried_table.get_mut(&bucket).unwrap().remove(&position);
+                    occurences += 1;
+                }
+            }
         }
+        debug!("removed {} occurences from {} table", occurences, table);
     }
-}
-
-fn split_bucket_pos_str(buc_pos: String) -> (Bucket, Position) {
-    let parts = buc_pos.split('/').collect::<Vec<_>>();
-    let bucket = parts[0].parse::<u16>().unwrap_or_default();
-    let position = parts[1].parse::<u16>().unwrap_or_default();
-    (bucket, position)
 }
 
 #[cfg(test)]

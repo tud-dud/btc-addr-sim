@@ -5,6 +5,7 @@ use std::path::PathBuf;
 use types::Addrman;
 
 mod addrman;
+mod helpers;
 mod sim;
 mod types;
 
@@ -28,8 +29,8 @@ struct Cli {
     #[arg(long = "seed", short = 's', default_value_t = 999)]
     seed: u64,
     /// Stop after this many steps
-    #[arg(long = "until", short = 'u')]
-    stop_after: Option<u64>,
+    #[arg(long = "until", short = 'u', default_value_t = 0)]
+    stop_after: u64,
     verbose: bool,
 }
 

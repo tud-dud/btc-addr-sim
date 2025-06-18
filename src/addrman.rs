@@ -41,7 +41,7 @@ impl Addrman {
                 "Moving {} from new[{}][{}] to tried[{}][{}]",
                 addr, bucket, position, new_bucket, new_position
             );
-            self.remove_from_table(true, bucket, position);
+            self.remove_all_from_table(true, bucket, position);
         }
     }
 
@@ -68,7 +68,7 @@ impl Addrman {
             // TODO: remove all occurences
             if let Some((bucket, position)) = self.get_pos_in_table(new, &addr) {
                 // remove from table
-                self.remove_from_table(new, bucket, position);
+                self.remove_all_from_table(new, bucket, position);
             }
             self.current_peers.push(addr);
         }

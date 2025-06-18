@@ -2,8 +2,9 @@ use log::{debug, info, trace};
 use rand::prelude::*;
 
 use crate::{
-    types::{Addr, AddrInfo, Addrman},
-    NUM_BUCKETS_NEW, NUM_BUCKETS_TRIED, NUM_POSITIONS,
+    helpers,
+    types::{Addr, Addrman},
+    NUM_BUCKETS_TRIED, NUM_POSITIONS,
 };
 
 const FEELER_TIME_INTERVAL: u64 = 2;
@@ -21,8 +22,8 @@ pub struct Simulation {
 }
 
 impl Simulation {
-    pub fn new(addrman: Addrman, stop_at: Option<u64>, num_attacker: usize, seed: u64) -> Self {
-        let attacker_addrs = generate_attacker_addresses(num_attacker, seed);
+    pub fn new(addrman: Addrman, stop_at: u64, num_attacker: usize, seed: u64) -> Self {
+        let attacker_addrs = helpers::generate_attacker_addresses(num_attacker, seed);
         let mut addrman = Addrman { ..addrman };
         addrman.insert_attacker_addresses(&attacker_addrs);
         let mut attacker_addrs: Vec<String> =
@@ -32,7 +33,7 @@ impl Simulation {
             addrman,
             attacker_addrs,
             steps: 0,
-            stop_at: stop_at.unwrap_or_default(),
+            stop_at,
             seed,
         }
     }
@@ -78,7 +79,7 @@ impl Simulation {
                 stop = true;
             }
             self.steps += 1;
-            if self.steps % 20 == 0 {
+            if self.steps % 100 == 0 {
                 info!(
                     "[ROUND = {}] Current number of attacker connections: {}",
                     self.steps,
@@ -124,11 +125,11 @@ impl Simulation {
                 .retain(|peer| *peer != *replayed_conn);
             // 2. remove this address from all tables because the attacker never allows it again
             if let Some((bucket, position)) = self.addrman.get_pos_in_table(true, replayed_conn) {
-                self.addrman.remove_from_table(true, bucket, position);
+                self.addrman.remove_all_from_table(true, bucket, position);
             } else if let Some((bucket, position)) =
                 self.addrman.get_pos_in_table(false, replayed_conn)
             {
-                self.addrman.remove_from_table(false, bucket, position);
+                self.addrman.remove_all_from_table(false, bucket, position);
             }
         }
     }
@@ -159,11 +160,11 @@ impl Simulation {
                     if let Some((bucket, position)) =
                         self.addrman.get_pos_in_table(true, rand_addr.1)
                     {
-                        self.addrman.remove_from_table(true, bucket, position);
+                        self.addrman.remove_all_from_table(true, bucket, position);
                     } else if let Some((bucket, position)) =
                         self.addrman.get_pos_in_table(false, rand_addr.1)
                     {
-                        self.addrman.remove_from_table(false, bucket, position);
+                        self.addrman.remove_all_from_table(false, bucket, position);
                     }
                     if self.is_attacker_address(rand_addr.1) {
                         new_peer_is_attacker = true;
@@ -199,53 +200,5 @@ impl Simulation {
     }
     fn is_attacker_address(&self, addr: &Addr) -> bool {
         self.attacker_addrs.contains(addr)
-    }
-}
-
-fn generate_attacker_addresses(num: usize, seed: u64) -> Vec<(AddrInfo, u16, u16)> {
-    info!("Generating {num} attacker addresses.");
-    let mut addrs = vec![];
-    let mut rng = SmallRng::seed_from_u64(seed);
-    let port = 18444;
-    let net = rng.random_range(1..255);
-    for i in 0..num {
-        let ip = format!("10.1.{}.{}", i + 1, net);
-        // random bucket and random position
-        let bucket: u16 = rng.random_range(..NUM_BUCKETS_NEW);
-        let pos: u16 = rng.random_range(..NUM_POSITIONS);
-        addrs.push((AddrInfo { address: ip, port }, bucket, pos));
-    }
-    addrs
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn addr_gen() {
-        let seed = 1;
-        let num = 2;
-        let actual = generate_attacker_addresses(num, seed);
-        assert_eq!(actual.len(), num);
-        let expected = vec![
-            (
-                AddrInfo {
-                    address: "10.1.1.207".to_string(),
-                    port: 18444,
-                },
-                765,
-                6,
-            ),
-            (
-                AddrInfo {
-                    address: "10.1.2.207".to_string(),
-                    port: 18444,
-                },
-                764,
-                11,
-            ),
-        ];
-        assert_eq!(actual, expected);
     }
 }
