@@ -1,11 +1,16 @@
 use clap::Parser;
-use log::{debug, error, info, LevelFilter};
-use rand::prelude::*;
+use log::{info, LevelFilter};
+use sim::Simulation;
 use std::path::PathBuf;
-use types::{AddrInfo, Addrman};
+use types::Addrman;
 
 mod addrman;
+mod sim;
 mod types;
+
+pub const NUM_BUCKETS_NEW: u16 = 1024;
+pub const NUM_BUCKETS_TRIED: u16 = 256;
+pub const NUM_POSITIONS: u16 = 64;
 
 #[derive(clap::Parser)]
 #[command(version, about)]
@@ -17,11 +22,14 @@ struct Cli {
     #[arg(long = "addrman", short = 'a', default_value = "./rawaddrman.json")]
     peers: PathBuf,
     /// Number of /16 attacker addresses to generate
-    #[arg(long = "num", short = 'n', default_value_t = 8)]
+    #[arg(long = "num", short = 'n', default_value_t = 10)]
     num_addrs: usize,
     /// Seed for the RNG
     #[arg(long = "seed", short = 's', default_value_t = 999)]
     seed: u64,
+    /// Stop after this many steps
+    #[arg(long = "until", short = 'u')]
+    stop_after: Option<u64>,
     verbose: bool,
 }
 
@@ -36,56 +44,9 @@ fn main() {
             addrman.new_table.len(),
             addrman.tried_table.len()
         );
-        addrman.get_initial_connections(args.seed, 8);
-        let attacker_addrs = generate_attacker_addresses(args.num_addrs, args.seed);
-        addrman.insert_attacker_addresses(&attacker_addrs);
-    }
-}
-
-fn generate_attacker_addresses(num: usize, seed: u64) -> Vec<(AddrInfo, u16, u16)> {
-    info!("Generating {num} attacker addresses.");
-    let mut addrs = vec![];
-    let mut rng = SmallRng::seed_from_u64(seed);
-    let port = 18444;
-    let net = rng.random_range(1..255);
-    for i in 0..num {
-        let ip = format!("11.1.{}.{}", i + 1, net);
-        // random bucket and random position
-        let bucket: u16 = rng.random_range(..1024);
-        let pos: u16 = rng.random_range(..64);
-        addrs.push((AddrInfo { address: ip, port }, bucket, pos));
-    }
-    addrs
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn addr_gen() {
-        let seed = 1;
-        let num = 2;
-        let actual = generate_attacker_addresses(num, seed);
-        assert_eq!(actual.len(), num);
-        let expected = vec![
-            (
-                AddrInfo {
-                    address: "11.1.1.207".to_string(),
-                    port: 18444,
-                },
-                765,
-                6,
-            ),
-            (
-                AddrInfo {
-                    address: "11.1.2.207".to_string(),
-                    port: 18444,
-                },
-                764,
-                11,
-            ),
-        ];
-        assert_eq!(actual, expected);
+        // + 2 block-relay only peers
+        addrman.get_initial_connections(args.seed, 10);
+        let mut sim = Simulation::new(addrman, args.stop_after, args.num_addrs, args.seed);
+        sim.start();
     }
 }
