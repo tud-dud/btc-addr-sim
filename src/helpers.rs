@@ -46,7 +46,7 @@ mod tests {
         let expected = vec![
             (
                 AddrInfo {
-                    address: "10.1.1.207".to_string(),
+                    address: "0.1.1.207".to_string(),
                     port: 18444,
                 },
                 765,
@@ -54,7 +54,7 @@ mod tests {
             ),
             (
                 AddrInfo {
-                    address: "10.1.2.207".to_string(),
+                    address: "0.1.2.207".to_string(),
                     port: 18444,
                 },
                 764,
