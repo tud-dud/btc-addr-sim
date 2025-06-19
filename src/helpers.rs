@@ -17,7 +17,7 @@ pub(crate) fn generate_attacker_addresses(num: usize, seed: u64) -> Vec<(AddrInf
     let port = 18444;
     let net = rng.random_range(1..255);
     for i in 0..num {
-        let ip = format!("10.1.{}.{}", i + 1, net);
+        let ip = format!("0.1.{}.{}", i + 1, net);
         // random bucket and random position
         let bucket: u16 = rng.random_range(..NUM_BUCKETS_NEW);
         let pos: u16 = rng.random_range(..NUM_POSITIONS);

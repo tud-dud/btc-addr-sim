@@ -40,7 +40,7 @@ impl Simulation {
         Self {
             addrman,
             attacker_addrs,
-            steps: 0,
+            steps: 1,
             stop_at,
             seed,
             concurrency,
@@ -62,7 +62,7 @@ impl Simulation {
         );
         let mut rng = SmallRng::seed_from_u64(self.seed);
         let mut stop = false;
-        let mut att_count_by_step = vec![(0, 0)];
+        let mut att_count_by_step = vec![];
         while !stop {
             trace!("Current round = {}", self.steps);
             if self.stop_at > 0 && self.steps >= self.stop_at {
@@ -73,13 +73,15 @@ impl Simulation {
             }
             if self.steps % REPLAY_TIME_INTERVAL == 0 {
                 self.replay_packet(&mut rng);
-                if self.choose_new_peer(&mut rng) {
-                    let num_conns = if let Some((_, prev_cnt)) = att_count_by_step.last() {
-                        prev_cnt + 1
-                    } else {
-                        1
-                    };
-                    att_count_by_step.push((self.steps, num_conns));
+                for _ in 0..self.concurrency {
+                    if self.choose_new_peer(&mut rng) {
+                        let num_conns = if let Some((_, prev_cnt)) = att_count_by_step.last() {
+                            prev_cnt + 1
+                        } else {
+                            1
+                        };
+                        att_count_by_step.push((self.steps, num_conns));
+                    }
                 }
             }
             if self.is_eclipsed() {
@@ -121,8 +123,6 @@ impl Simulation {
         }
     }
 
-    // number of concurrent actions?
-    // remove from current peers
     fn replay_packet(&mut self, rng: &mut SmallRng) {
         // 0. ignore attacker addresses
         let mut potential_addresses = self.addrman.current_peers.clone();
@@ -148,6 +148,9 @@ impl Simulation {
         }
     }
     fn choose_new_peer(&mut self, rng: &mut SmallRng) -> bool {
+        if self.addrman.current_peers.len() >= 10 {
+            return false;
+        }
         let mut new_peer_is_attacker = false;
         // 1. choose a table
         if let Some(use_new_table) = [true, false].choose(rng) {
