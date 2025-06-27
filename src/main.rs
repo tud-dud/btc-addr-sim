@@ -15,11 +15,13 @@ pub const NUM_POSITIONS: u16 = 64;
 
 #[derive(clap::Parser)]
 #[command(version, about)]
-/// Listen for TCP connections.
+/// Simulate occupying a node's outgoing connection slots at a given rate of disconnections with a
+/// given number of IP prefixes.
 struct Cli {
     #[arg(long = "log", short = 'l', default_value = "info")]
     log_level: LevelFilter,
-    /// Path to JSON file containing the addrman dump
+    /// Path to JSON file containing the addrman dump obtained using bitcoin-cli getrawaddrman.
+    /// The expected format is that of Bitcoin Core 28.0.
     #[arg(long = "addrman", short = 'a', default_value = "./rawaddrman.json")]
     peers: PathBuf,
     /// Number of /16 attacker addresses to generate
