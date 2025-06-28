@@ -134,7 +134,7 @@ impl Addrman {
                 }
             }
         }
-        debug!("removed {} occurences from {} table", occurences, table);
+        debug!("removed {occurences} occurences from {table} table");
     }
 }
 

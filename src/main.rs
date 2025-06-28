@@ -53,12 +53,9 @@ fn main() {
         PathBuf::from("sim-results")
     };
     if let Err(e) = std::fs::create_dir_all(&output_dir) {
-        error!("Error creating output directory {}", e);
+        error!("Error creating output directory {e}");
     }
-    info!(
-        "Simulation results will be written to {:#?}/ directory.",
-        output_dir
-    );
+    info!("Simulation results will be written to {output_dir:#?}/ directory.");
 
     if let Some(mut addrman) = Addrman::from_json_file(&args.peers) {
         info!(

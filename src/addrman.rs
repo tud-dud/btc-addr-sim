@@ -38,8 +38,7 @@ impl Addrman {
         // remove from table
         if let Some((bucket, position)) = self.get_pos_in_table(true, addr) {
             debug!(
-                "Moving {} from new[{}][{}] to tried[{}][{}]",
-                addr, bucket, position, new_bucket, new_position
+                "Moving {addr} from new[{bucket}][{position}] to tried[{new_bucket}][{new_position}]",
             );
             self.remove_all_from_table(true, bucket, position);
         }
