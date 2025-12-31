@@ -68,10 +68,10 @@ impl Simulation {
             if self.stop_at > 0 && self.steps >= self.stop_at {
                 stop = true;
             }
-            if self.steps % FEELER_TIME_INTERVAL == 0 {
+            if self.steps.is_multiple_of(FEELER_TIME_INTERVAL) {
                 self.make_feeler_connection(&mut rng);
             }
-            if self.steps % REPLAY_TIME_INTERVAL == 0 {
+            if self.steps.is_multiple_of(REPLAY_TIME_INTERVAL) {
                 self.replay_packet(&mut rng);
                 for _ in 0..self.concurrency {
                     if self.choose_new_peer(&mut rng) {
@@ -93,7 +93,7 @@ impl Simulation {
                 stop = true;
             }
             self.steps += 1;
-            if self.steps % 100 == 0 {
+            if self.steps.is_multiple_of(100) {
                 info!(
                     "[ROUND = {}] Current number of attacker connections: {}",
                     self.steps,
